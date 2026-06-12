@@ -11,3 +11,7 @@ print("Welcome to Python programming!")
 print("Let's start coding!")
 # This line encourages users to start coding and explore the possibilities of Python.   
 # Remember, programming is a skill that improves with practice, so keep coding and have fun!
+
+print ("Goodbye, World!")
+# This line prints "Goodbye, World!" to the console, signaling the end of the
+# program. You can modify this message or add more lines to create a more complex program.
