@@ -1,5 +1,5 @@
 personagem = {
-    "nome": "Aragorn",
+    "nome": "Carolina",
     "classe": "Mago",
     "nivel": 5,
     "vida": 100,
