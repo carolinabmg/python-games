@@ -1,64 +1,82 @@
-# 🎮 Games
+# 🎮 Python Games Portfolio
 
-Repositório dedicado aos meus projetos e exercícios de desenvolvimento de jogos, criados durante minha jornada de aprendizado em programação.
+Bem-vindo ao meu portfólio de jogos desenvolvidos em Python!
 
-## 📚 Objetivo
+Este repositório reúne projetos criados durante minha jornada de aprendizado em programação, com foco no desenvolvimento da lógica, algoritmos e boas práticas de código.
 
-Este repositório tem como objetivo armazenar projetos relacionados a jogos, praticando conceitos como:
+## 🚀 Objetivo
 
-- Lógica de programação
-- Estruturas de dados
-- Programação orientada a objetos
-- Manipulação de eventos
-- Loops e condições
-- Interface com o usuário
-- Desenvolvimento de mecânicas de jogos
+Desenvolver habilidades em programação através da criação de jogos interativos, explorando conceitos fundamentais e avançados da linguagem Python.
 
-## 🚀 Tecnologias Utilizadas
+## 🛠️ Tecnologias Utilizadas
 
-- Python 🐍
-- Git & GitHub
+- Python 3
 - VS Code
+- Git
+- GitHub
 
-## 🎯 Projetos
+## 📂 Projetos
 
-| Projeto | Descrição | Status |
-|----------|----------|----------|
-| RPG Textual | Sistema de batalha e personagens em terminal | 🚧 Em desenvolvimento |
-| Jogo da Adivinhação | Jogo simples de números aleatórios | ✅ Concluído |
-| Pedra, Papel e Tesoura | Jogo contra o computador | ✅ Concluído |
-| Outros projetos | Exercícios e desafios de programação | 🚀 Em andamento |
+### 🎯 Jogo da Adivinhação
+O jogador deve descobrir um número secreto gerado aleatoriamente pelo computador.
 
-## 📂 Estrutura do Repositório
-
-```bash
-Games/
-│
-├── RPG/
-├── Jogo-da-Adivinhacao/
-├── Pedra-Papel-Tesoura/
-└── README.md
-```
-
-## 🌱 Aprendizados
-
-Através destes projetos estou desenvolvendo habilidades em:
-
-- Resolução de problemas
-- Pensamento lógico
-- Versionamento com Git
-- Organização de código
-- Boas práticas de programação
-
-## 👩‍💻 Sobre Mim
-
-Meu nome é Carolina Bueno Mendonça Gonçalves e estou em transição para a área de Tecnologia, estudando Análise e Desenvolvimento de Sistemas e construindo meu portfólio de programação.
-
-### 📫 Contato
-
-- GitHub: :contentReference[oaicite:0]{index=0}
-- LinkedIn: Adicione seu perfil aqui
+**Conceitos praticados:**
+- Variáveis
+- Condicionais (`if`, `else`)
+- Laços de repetição (`while`)
+- Biblioteca `random`
 
 ---
 
-⭐ Se você gostou deste projeto ou quer acompanhar minha evolução na programação, fique à vontade para explorar meus repositórios!
+### ✊✋✌️ Pedra, Papel e Tesoura
+Jogo clássico contra o computador.
+
+**Conceitos praticados:**
+- Estruturas condicionais
+- Entrada e saída de dados
+- Geração de números aleatórios
+- Lógica de comparação
+
+---
+
+### 🧮 Calculadora Interativa
+Calculadora com múltiplas operações matemáticas.
+
+**Conceitos praticados:**
+- Funções
+- Operadores matemáticos
+- Menus interativos
+- Tratamento de entradas
+
+---
+
+### ⚔️ RPG de Texto
+Sistema simples de combate em modo texto.
+
+**Conceitos praticados:**
+- Dicionários
+- Listas
+- Funções
+- Estruturas de dados
+
+## 📈 Aprendizados
+
+Durante o desenvolvimento destes projetos, estou praticando:
+
+- Lógica de Programação
+- Algoritmos
+- Estruturas de Dados
+- Programação Orientada a Objetos
+- Versionamento com Git e GitHub
+
+## 🎓 Sobre Mim
+
+Sou estudante de Análise e Desenvolvimento de Sistemas, apaixonada por tecnologia e desenvolvimento de software. Este repositório faz parte da minha evolução como desenvolvedora e registra minha trajetória de aprendizado na programação.
+
+## 📫 Contato
+
+GitHub: https://github.com/carolinabmg
+
+---
+
+⭐ Se gostou do projeto, fique à vontade para explorar os códigos e acompanhar minha evolução!
