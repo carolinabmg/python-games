@@ -1,3 +1,5 @@
+import random
+
 personagem = {
     "nome": "Carolina",
     "classe": "Mago",
@@ -8,15 +10,12 @@ personagem = {
 }
 
 inimigos = [
-    {"nome": "Orc", "vida": 50},
-    {"nome": "dragon", "vida": 30},
-    {"nome": "Troll", "vida": 80}
-
+    {"nome": "Orc", "vida": 50, "defesa": 5},
+    {"nome": "Dragon", "vida": 30, "defesa": 8},
+    {"nome": "Troll", "vida": 80, "defesa": 3}
 ]
 
 print(f"⚔️ Bem-vindo, {personagem['nome']}!")
-
-import random
 
 def atacar(atacante, alvo):
     chance = random.randint(1, 100)
@@ -26,10 +25,12 @@ def atacar(atacante, alvo):
         return
 
     dano = max(0, atacante["ataque"] - alvo["defesa"])
-    alvo["vida"] -= dano
 
-    print(f"⚔️ {atacante['nome']} atacou {alvo['nome']}")
-    print(f"💥 Dano: {dano}")
+    alvo["vida"] = max(0, alvo["vida"] - dano)
+
+    print(f"\n⚔️ {atacante['nome']} atacou {alvo['nome']}!")
+    print(f"💥 Dano causado: {dano}")
+    print(f"❤️ Vida restante: {alvo['vida']}")
 
 while len(inimigos) > 0:
 
@@ -37,65 +38,38 @@ while len(inimigos) > 0:
     for i, inimigo in enumerate(inimigos, start=1):
         print(f"{i} - {inimigo['nome']} ❤️ {inimigo['vida']}")
 
-    print("\nAções:") # Imprime as opções de ação para o jogador
+    print("\nAções:")
     print("1 - Atacar")
     print("2 - Curar")
 
-    escolha = input("O que deseja fazer? ") # Solicita ao jogador que escolha uma ação
+    escolha = input("O que deseja fazer? ")
 
     if escolha == "1":
 
-        alvo = int(input("Escolha o número do inimigo: ")) - 1 # Solicita ao jogador que escolha um inimigo para atacar   
+        alvo = int(input("Escolha o número do inimigo: ")) - 1
 
         if 0 <= alvo < len(inimigos):
 
             inimigo_escolhido = inimigos[alvo]
 
-            dano_causado = max(
-                0,
-                personagem["ataque"] - 5
-            )
-
-            inimigo_escolhido["vida"] = max(
-                0,
-                inimigo_escolhido["vida"] - dano_causado
-            )
-
-            print(
-                f"\n⚔️ Você causou {dano_causado} de dano ao "
-                f"{inimigo_escolhido['nome']}!"
-            )
-
-            print(
-                f"❤️ Vida restante: "
-                f"{inimigo_escolhido['vida']}"
-            )
+            atacar(personagem, inimigo_escolhido)
 
             if inimigo_escolhido["vida"] <= 0:
-                print(
-                    f"💀 {inimigo_escolhido['nome']} foi derrotado!"
-                )
-
+                print(f"💀 {inimigo_escolhido['nome']} foi derrotado!")
                 inimigos.remove(inimigo_escolhido)
 
         else:
             print("❌ Inimigo não existe!")
 
-    elif escolha == "2": # Verifica se o jogador escolheu curar
+    elif escolha == "2":
 
         personagem["vida"] += 20
 
-        print(
-            f"✨ Você se curou!"
-        )
-
-        print(
-            f"❤️ Vida atual: {personagem['vida']}"
-        )
+        print("✨ Você se curou!")
+        print(f"❤️ Vida atual: {personagem['vida']}")
 
     else:
         print("❌ Opção inválida!")
 
-if len(inimigos) == 0: # Verifica se todos os inimigos foram derrotados
-    print("\n🏆 Todos os inimigos foram derrotados!")
-    print("🎉 Vitória!")
+print("\n🏆 Todos os inimigos foram derrotados!")
+print("🎉 Vitória!")
