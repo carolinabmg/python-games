@@ -15,3 +15,7 @@ print("Let's start coding!")
 print ("Goodbye, World!")
 # This line prints "Goodbye, World!" to the console, signaling the end of the
 # program. You can modify this message or add more lines to create a more complex program.
+
+
+print("This is the end of the program.")
+# This line indicates that the program has reached its conclusion. You can add more functionality or messages before this line to create a more interactive experience for users. Happy coding! 

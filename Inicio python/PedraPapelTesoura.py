@@ -15,3 +15,29 @@ elif (jogador == "pedra" and computador == "tesoura") or \
      (jogador == "tesoura" and computador == "papel"):  
     print("Você ganhou!")
 else:    print("Computador ganhou!")
+
+while True:
+    jogar_novamente = input("Deseja jogar novamente? (s/n): ").lower()
+
+    if jogar_novamente == "s":
+        computador = random.choice(opcoes)
+        jogador = input("Escolha pedra, papel ou tesoura: ").lower()
+
+        print(f"Você escolheu: {jogador}")
+        print(f"Computador escolheu: {computador}")
+
+        if jogador == computador:
+            print("Empate!")
+        elif (jogador == "pedra" and computador == "tesoura") or \
+             (jogador == "papel" and computador == "pedra") or \
+             (jogador == "tesoura" and computador == "papel"):
+            print("Você ganhou!")
+        else:
+            print("Computador ganhou!")
+
+    elif jogar_novamente == "n":
+        print("👋 Obrigado por jogar!")
+        break
+
+    else:
+        print("❌ Digite apenas s ou n.")
