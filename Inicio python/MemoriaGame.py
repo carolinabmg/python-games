@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 import random
 import time
 import os
@@ -36,21 +36,29 @@ vidas = VIDAS_INICIAIS
 pontos = 0
 tentativas = 0
 pares_encontrados = 0
-
 inicio = 0
+
+nome_jogador = "Aventureiro"
 
 # =====================
 # JANELA
 # =====================
 
 janela = tk.Tk()
-janela.title("🃏 Jogo da Memória")
-janela.geometry("500x650")
+janela.title("🃏 Jogo da Memória Deluxe")
+janela.geometry("500x700")
 janela.resizable(False, False)
 
 # =====================
 # LABELS
 # =====================
+
+label_jogador = tk.Label(
+    janela,
+    text="👤 Jogador:",
+    font=("Arial", 14)
+)
+label_jogador.pack()
 
 label_vidas = tk.Label(
     janela,
@@ -87,31 +95,122 @@ label_tempo.pack()
 frame = tk.Frame(janela)
 frame.pack(pady=20)
 
+# =====================
+# FUNÇÕES DO RANKING
+# =====================
+
+def carregar_ranking():
+    ranking = []
+
+    if os.path.exists("ranking.txt"):
+        with open(
+            "ranking.txt",
+            "r",
+            encoding="utf-8"
+        ) as arquivo:
+
+            for linha in arquivo:
+                try:
+                    nome, tent, tempo = linha.strip().split(",")
+
+                    ranking.append(
+                        (
+                            nome,
+                            int(tent),
+                            int(tempo)
+                        )
+                    )
+                except:
+                    pass
+
+    return ranking
+
+
+def salvar_ranking(nome, tentativas, tempo):
+    ranking = carregar_ranking()
+
+    ranking.append(
+        (
+            nome,
+            tentativas,
+            tempo
+        )
+    )
+
+    ranking.sort(
+        key=lambda jogador:
+        (jogador[1], jogador[2])
+    )
+
+    ranking = ranking[:10]
+
+    with open(
+        "ranking.txt",
+        "w",
+        encoding="utf-8"
+    ) as arquivo:
+
+        for jogador in ranking:
+            arquivo.write(
+                f"{jogador[0]},"
+                f"{jogador[1]},"
+                f"{jogador[2]}\n"
+            )
+
+
+def mostrar_ranking():
+    ranking = carregar_ranking()
+
+    if not ranking:
+        messagebox.showinfo(
+            "Ranking",
+            "Ainda não há jogadores no ranking."
+        )
+        return
+
+    texto = "🏆 TOP 10 AVENTUREIROS\n\n"
+
+    for posicao, jogador in enumerate(
+            ranking,
+            start=1):
+
+        nome = jogador[0]
+        tent = jogador[1]
+        tempo = jogador[2]
+
+        minutos = tempo // 60
+        segundos = tempo % 60
+
+        if posicao == 1:
+            medalha = "🥇"
+        elif posicao == 2:
+            medalha = "🥈"
+        elif posicao == 3:
+            medalha = "🥉"
+        else:
+            medalha = "🏅"
+
+        texto += (
+            f"{medalha} "
+            f"{nome} - "
+            f"{tent} tentativas - "
+            f"{minutos:02}:{segundos:02}\n"
+        )
+
+    messagebox.showinfo(
+        "Ranking",
+        texto
+    )
 
 # =====================
-# RECORDE
-# =====================
-
-def carregar_recorde():
-    if os.path.exists("recorde.txt"):
-        with open("recorde.txt", "r") as arquivo:
-            try:
-                return int(arquivo.read())
-            except:
-                return 9999
-    return 9999
-
-
-def salvar_recorde(valor):
-    with open("recorde.txt", "w") as arquivo:
-        arquivo.write(str(valor))
-
-
-# =====================
-# ATUALIZAR TELA
+# LABELS
 # =====================
 
 def atualizar_labels():
+    label_jogador.config(
+        text=f"👤 Jogador: {nome_jogador}"
+    )
+
     label_vidas.config(
         text=f"❤️ Vidas: {vidas}"
     )
@@ -123,7 +222,6 @@ def atualizar_labels():
     label_tentativas.config(
         text=f"🎯 Tentativas: {tentativas}"
     )
-
 
 # =====================
 # CRONÔMETRO
@@ -140,7 +238,8 @@ def atualizar_tempo():
         segundos = segundos % 60
 
         label_tempo.config(
-            text=f"⏱️ Tempo: {minutos:02}:{segundos:02}"
+            text=f"⏱️ Tempo: "
+                 f"{minutos:02}:{segundos:02}"
         )
 
         janela.after(
@@ -148,9 +247,35 @@ def atualizar_tempo():
             atualizar_tempo
         )
 
+# =====================
+# VITÓRIA
+# =====================
+
+def venceu():
+    tempo = int(
+        time.time() - inicio
+    )
+
+    salvar_ranking(
+        nome_jogador,
+        tentativas,
+        tempo
+    )
+
+    minutos = tempo // 60
+    segundos = tempo % 60
+
+    messagebox.showinfo(
+        "Vitória",
+        f"🎉 Parabéns, {nome_jogador}!\n\n"
+        f"⭐ Pontos: {pontos}\n"
+        f"🎯 Tentativas: {tentativas}\n"
+        f"⏱️ Tempo: "
+        f"{minutos:02}:{segundos:02}"
+    )
 
 # =====================
-# VERIFICAR PAR
+# VERIFICAR CARTAS
 # =====================
 
 def verificar():
@@ -183,6 +308,7 @@ def verificar():
     else:
 
         vidas -= 1
+
         pontos = max(
             0,
             pontos - 20
@@ -212,9 +338,8 @@ def verificar():
     if pares_encontrados == 8:
         venceu()
 
-
 # =====================
-# CLIQUE NAS CARTAS
+# CLIQUE
 # =====================
 
 def clicar(indice):
@@ -236,11 +361,8 @@ def clicar(indice):
     )
 
     if primeira is None:
-
         primeira = indice
-
     else:
-
         segunda = indice
         travado = True
 
@@ -249,40 +371,8 @@ def clicar(indice):
             verificar
         )
 
-
 # =====================
-# VITÓRIA
-# =====================
-
-def venceu():
-    tempo = int(
-        time.time() - inicio
-    )
-
-    minutos = tempo // 60
-    segundos = tempo % 60
-
-    recorde = carregar_recorde()
-
-    mensagem = (
-        f"🎉 PARABÉNS!\n\n"
-        f"⭐ Pontos: {pontos}\n"
-        f"🎯 Tentativas: {tentativas}\n"
-        f"⏱️ Tempo: {minutos:02}:{segundos:02}"
-    )
-
-    if tentativas < recorde:
-        salvar_recorde(tentativas)
-        mensagem += "\n\n🏆 NOVO RECORDE!"
-
-    messagebox.showinfo(
-        "Vitória",
-        mensagem
-    )
-
-
-# =====================
-# REINICIAR
+# NOVO JOGO
 # =====================
 
 def reiniciar():
@@ -294,6 +384,17 @@ def reiniciar():
     global primeira
     global segunda
     global inicio
+    global nome_jogador
+
+    nome = simpledialog.askstring(
+        "Jogador",
+        "Digite seu nome:"
+    )
+
+    if nome:
+        nome_jogador = nome
+    else:
+        nome_jogador = "Aventureiro"
 
     cartas = EMOJIS.copy()
     random.shuffle(cartas)
@@ -306,8 +407,6 @@ def reiniciar():
     primeira = None
     segunda = None
 
-    atualizar_labels()
-
     for botao in botoes:
         botao.config(
             text="❓",
@@ -315,8 +414,9 @@ def reiniciar():
         )
 
     inicio = time.time()
-    atualizar_tempo()
 
+    atualizar_labels()
+    atualizar_tempo()
 
 # =====================
 # CRIAR BOTÕES
@@ -330,7 +430,8 @@ for i in range(16):
         width=5,
         height=2,
         font=("Arial", 20),
-        command=lambda i=i: clicar(i)
+        command=lambda i=i:
+        clicar(i)
     )
 
     botao.grid(
@@ -343,7 +444,7 @@ for i in range(16):
     botoes.append(botao)
 
 # =====================
-# BOTÃO NOVO JOGO
+# BOTÕES EXTRAS
 # =====================
 
 tk.Button(
@@ -351,7 +452,14 @@ tk.Button(
     text="🔄 Novo Jogo",
     font=("Arial", 14),
     command=reiniciar
-).pack(pady=15)
+).pack(pady=5)
+
+tk.Button(
+    janela,
+    text="🏆 Ranking Top 10",
+    font=("Arial", 14),
+    command=mostrar_ranking
+).pack(pady=5)
 
 # =====================
 # INICIAR
