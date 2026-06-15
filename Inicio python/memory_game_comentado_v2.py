@@ -1,0 +1,855 @@
+# =====================================================
+# JOGO DA MEMÓRIA DELUXE COM CRONÔMETRO
+# Versão educativa com comentários detalhados
+# =====================================================
+
+import json  # Para trabalhar com arquivos JSON (ranking)
+import os    # Para manipular caminhos de arquivos
+import random  # Para embaralhar as cartas
+import tkinter as tk  # Para criar interface gráfica
+from tkinter import messagebox  # Para mostrar janelas de alerta
+import time  # Para controlar o cronômetro
+
+# =====================================================
+# CONFIGURAÇÕES INICIAIS
+# =====================================================
+
+# Caminho do arquivo que vai salvar o ranking
+RANKING_FILE = os.path.join(os.path.dirname(__file__), "memory_game_ranking.json")
+
+# Lista com os símbolos que vão aparecer nas cartas
+CARD_ICONS = ["🌙", "🌸", "🌟", "🎀", "🐇", "🍓", "🧸", "🎮"]
+
+# =====================================================
+# CRIAR JANELA PRINCIPAL
+# =====================================================
+
+root = tk.Tk()  # Cria a janela principal
+root.title("Memory Game Deluxe")  # Define o título da janela
+root.geometry("1300x950")  # Define tamanho: 1300 pixels de largura, 950 de altura
+root.configure(bg="#fff0f6")  # Define cor de fundo (rosa claro)
+root.resizable(True, True)  # Permite redimensionar a janela
+
+# =====================================================
+# VARIÁVEIS GLOBAIS DO JOGO
+# =====================================================
+
+# Armazena o nome do jogador
+player_name = tk.StringVar()
+
+# Variáveis de gameplay
+lives = 100  # Vidas do jogador
+attempts = 100  # Tentativas disponíveis
+card_values = []  # Lista com os valores das cartas
+card_buttons = []  # Lista com os botões das cartas
+matched_indices = set()  # Conjunto com índices das cartas já acertadas
+first_selection = None  # Primeira carta selecionada
+second_selection = None  # Segunda carta selecionada
+
+# Variáveis do cronômetro
+start_time = None  # Hora de início do jogo
+timer_running = False  # Status do cronômetro (ligado ou desligado)
+timer_label = None  # Label que mostra o tempo
+timer_id = None  # ID do timer para poder cancelar depois
+
+# Variáveis para rastrear pares encontrados
+pairs_found = 0  # Quantos pares foram encontrados
+total_pairs = 8  # Total de pares no jogo
+pairs_label = None  # Label que mostra o progresso
+
+
+# =====================================================
+# FUNÇÕES DE RANKING (SALVAR/CARREGAR PONTUAÇÕES)
+# =====================================================
+
+def load_ranking():
+    """
+    Carrega o ranking do arquivo JSON.
+    Se o arquivo não existir, retorna uma lista vazia.
+    """
+    try:
+        with open(RANKING_FILE, "r", encoding="utf-8") as file:
+            return json.load(file)  # Lê o arquivo e converte para dicionário
+    except Exception:
+        return []  # Se houver erro, retorna lista vazia
+
+
+def save_ranking(entries):
+    """
+    Salva o ranking em um arquivo JSON.
+    
+    Args:
+        entries: Lista com os dados do ranking
+    """
+    with open(RANKING_FILE, "w", encoding="utf-8") as file:
+        # Escreve os dados no arquivo em formato JSON bem formatado
+        json.dump(entries, file, ensure_ascii=False, indent=2)
+
+
+def update_ranking(name, score, time_taken):
+    """
+    Adiciona um novo jogador ao ranking e mantém apenas os top 10.
+    
+    Args:
+        name: Nome do jogador
+        score: Pontuação final
+        time_taken: Tempo gasto (formato MM:SS)
+    """
+    entries = load_ranking()  # Carrega ranking atual
+    
+    # Adiciona o novo jogador
+    entries.append({"name": name, "score": score, "time": time_taken})
+    
+    # Ordena por pontuação (maior primeiro)
+    entries.sort(key=lambda item: item["score"], reverse=True)
+    
+    # Mantém apenas os 10 melhores
+    entries = entries[:10]
+    
+    save_ranking(entries)  # Salva no arquivo
+
+
+def reset_ranking():
+    """
+    Apaga todo o ranking. Pede confirmação antes de fazer isso.
+    """
+    if messagebox.askyesno("Resetar Ranking", "Deseja apagar o ranking top 10? 🤍"):
+        save_ranking([])  # Salva lista vazia (apaga ranking)
+        update_ranking_list()  # Atualiza a exibição
+
+
+def update_ranking_list():
+    """
+    Atualiza a exibição do ranking na tela.
+    Mostra nome, pontos e tempo de cada jogador.
+    """
+    # Remove todos os widgets anteriores do frame
+    for widget in ranking_list_frame.winfo_children():
+        widget.destroy()
+
+    entries = load_ranking()  # Carrega ranking atual
+    
+    # Se não há jogadores, mostra mensagem
+    if not entries:
+        tk.Label(
+            ranking_list_frame,
+            text="Ranking vazio. Jogue para aparecer aqui!",
+            font=("Arial", 16),
+            bg="#fff0f6",
+            fg="#4a148c",
+        ).pack(pady=8)
+        return
+
+    # Para cada jogador no ranking, cria uma label mostrando suas informações
+    for pos, item in enumerate(entries, start=1):  # enumerate começa do 1, não do 0
+        time_str = item.get("time", "N/A")  # Pega o tempo (ou "N/A" se não existir)
+        score = item.get("score", 0)  # Pega a pontuação
+        
+        tk.Label(
+            ranking_list_frame,
+            text=f"{pos:02d}. {item['name']} — {score} pontos — ⏱️ {time_str}",
+            font=("Arial", 16, "bold"),
+            bg="#fff0f6",
+            fg="#4a148c",
+        ).pack(anchor="w", padx=20, pady=3)
+
+
+# =====================================================
+# FUNÇÕES DO CRONÔMETRO
+# =====================================================
+
+def update_timer():
+    """
+    Atualiza o cronômetro a cada 1 segundo.
+    Calcula tempo decorrido e atualiza a label.
+    """
+    global timer_id, start_time, timer_running
+    
+    # Se o cronômetro está rodando
+    if timer_running and start_time is not None:
+        # Calcula quantos segundos se passaram
+        elapsed = int(time.time() - start_time)
+        
+        # Converte para minutos e segundos
+        minutes = elapsed // 60  # Divisão inteira (quantos minutos completos)
+        seconds = elapsed % 60   # Resto (segundos restantes)
+        
+        # Atualiza o label com formato MM:SS
+        timer_label.config(text=f"⏱️ {minutes:02d}:{seconds:02d}")
+        
+        # Agenda a próxima atualização em 1000 milissegundos (1 segundo)
+        timer_id = root.after(1000, update_timer)
+
+
+def start_timer():
+    """
+    Inicia o cronômetro quando o jogo começa.
+    """
+    global start_time, timer_running
+    start_time = time.time()  # Registra a hora atual
+    timer_running = True  # Marca cronômetro como ativo
+    update_timer()  # Começa a atualizar
+
+
+def stop_timer():
+    """
+    Para o cronômetro quando o jogo termina.
+    """
+    global timer_running, timer_id
+    timer_running = False  # Marca como inativo
+    if timer_id:
+        root.after_cancel(timer_id)  # Cancela a próxima atualização agendada
+
+
+def get_elapsed_time():
+    """
+    Retorna o tempo decorrido em formato MM:SS.
+    
+    Returns:
+        String no formato "MM:SS"
+    """
+    if start_time is None:
+        return "00:00"
+    
+    # Calcula quantos segundos se passaram
+    elapsed = int(time.time() - start_time)
+    minutes = elapsed // 60
+    seconds = elapsed % 60
+    
+    return f"{minutes:02d}:{seconds:02d}"
+
+
+# =====================================================
+# FUNÇÕES DE NAVEGAÇÃO ENTRE TELAS
+# =====================================================
+
+def reset_frames():
+    """
+    Esconde todas as telas (frames) principais.
+    Usado para trocar entre telas sem sobreposição.
+    """
+    for frame in (home_frame, game_frame, ranking_frame, victory_frame):
+        frame.place_forget()  # place_forget remove o frame da tela
+
+
+def show_home():
+    """Mostra a tela inicial."""
+    reset_frames()
+    home_frame.place(relwidth=1, relheight=1)  # Coloca na tela preenchendo tudo
+
+
+def show_ranking():
+    """Mostra a tela de ranking."""
+    update_ranking_list()  # Atualiza lista antes de mostrar
+    reset_frames()
+    ranking_frame.place(relwidth=1, relheight=1)
+
+
+def show_game():
+    """Mostra a tela do jogo."""
+    reset_frames()
+    game_frame.place(relwidth=1, relheight=1)
+    # Atualiza o nome do jogador na tela
+    name_display_label.config(text=f"Jogador: {player_name.get() or 'Convidado'}")
+
+
+def show_victory():
+    """Mostra a tela de vitória."""
+    reset_frames()
+    victory_frame.place(relwidth=1, relheight=1)
+
+
+def exit_game():
+    """
+    Sair do jogo. Pede confirmação antes de fechar.
+    """
+    answer = messagebox.askyesno("Sair", "Deseja sair do jogo? Tchauzinho! 🌸")
+    if answer:
+        stop_timer()  # Para o cronômetro antes de sair
+        root.destroy()  # Fecha a janela
+
+
+# =====================================================
+# FUNÇÕES DO JOGO
+# =====================================================
+
+def update_status():
+    """
+    Atualiza a exibição de vidas e tentativas na tela.
+    Muda a cor para vermelho se estão acabando.
+    """
+    life_label.config(text=f"Vidas: {lives}")
+    attempt_label.config(text=f"Tentativas: {attempts}")
+    
+    # Se vidas ou tentativas estão baixas (≤20), muda para vermelho
+    if lives <= 20 or attempts <= 20:
+        life_label.config(fg="#d50000")
+        attempt_label.config(fg="#d50000")
+    else:
+        life_label.config(fg="#6a1b9a")
+        attempt_label.config(fg="#6a1b9a")
+
+
+def update_pairs_display():
+    """
+    Atualiza a exibição de pares encontrados na tela.
+    Mostra: "🎁 Pares: 3/8" e muda cor conforme progresso.
+    """
+    global pairs_found, total_pairs
+    
+    # Atualiza o texto mostrando progresso
+    pairs_label.config(text=f"🎁 Pares: {pairs_found}/{total_pairs}")
+    
+    # Muda cor conforme progresso
+    if pairs_found == total_pairs:
+        # Todos encontrados - cor verde
+        pairs_label.config(fg="#00aa00")
+    elif pairs_found >= total_pairs * 0.75:
+        # 75% - cor azul
+        pairs_label.config(fg="#0066cc")
+    elif pairs_found >= total_pairs * 0.5:
+        # 50% - cor amarela
+        pairs_label.config(fg="#ff9900")
+    else:
+        # Menos de 50% - cor padrão
+        pairs_label.config(fg="#6a1b9a")
+
+
+def finish_game(win):
+    """
+    Finaliza o jogo. Calcula pontuação e mostra resultado.
+    
+    Args:
+        win: True se jogador venceu, False se perdeu
+    """
+    global timer_running, start_time
+    stop_timer()  # Para o cronômetro
+    
+    if win:
+        # ========== CÁLCULO DA PONTUAÇÃO ==========
+        
+        # Pontos base: vidas + tentativas restantes
+        base_score = lives + attempts
+        
+        # Bônus por tempo (quanto mais rápido, maior o bônus)
+        if start_time is not None:
+            elapsed_seconds = int(time.time() - start_time)
+            # Fórmula: 1000 / segundos (com +1 para evitar divisão por zero)
+            time_bonus = max(0, int(1000 / (elapsed_seconds + 1)))
+        else:
+            elapsed_seconds = 0
+            time_bonus = 0
+        
+        # Pontuação final = base + bônus
+        final_score = base_score + time_bonus
+        time_taken = get_elapsed_time()
+        
+        # Mostra mensagem detalhada de vitória
+        victory_message.set(
+            f"Parabéns, {player_name.get() or 'Convidado'}!\n"
+            f"Vidas: {lives} | Tentativas: {attempts} | Tempo: {time_taken}\n"
+            f"Pontos base: {base_score} | Bônus tempo: +{time_bonus}\n"
+            f"🏆 PONTUAÇÃO FINAL: {final_score} pontos!"
+        )
+        
+        # Salva no ranking
+        update_ranking(player_name.get() or "Convidado", final_score, time_taken)
+        show_victory()
+    else:
+        # Se perdeu, mostra mensagem e volta ao jogo
+        messagebox.showinfo(
+            "Game Over",
+            "Você ficou sem vidas ou tentativas. Tente novamente! 🍥",
+        )
+        new_game()
+
+
+def check_match():
+    """
+    Verifica se as duas cartas selecionadas são iguais.
+    Se forem, marca como acertadas.
+    Se não forem, diminui vidas e tentativas.
+    """
+    global first_selection, second_selection, lives, attempts, pairs_found
+
+    # Se não há duas cartas selecionadas, não faz nada
+    if first_selection is None or second_selection is None:
+        return
+
+    first = first_selection
+    second = second_selection
+    
+    # Verifica se as cartas têm o mesmo valor
+    if card_values[first] == card_values[second]:
+        # ACERTO! Marca como combinadas
+        matched_indices.update({first, second})
+        card_buttons[first].config(bg="#ffd1e8", state="disabled")
+        card_buttons[second].config(bg="#ffd1e8", state="disabled")
+        
+        # ← NOVO: Incrementa contador de pares encontrados
+        pairs_found += 1
+        update_pairs_display()  # Atualiza a exibição de pares
+    else:
+        # ERRADO! Esconde as cartas novamente e perde vida/tentativa
+        card_buttons[first].config(text="", bg="#ffe4f1")
+        card_buttons[second].config(text="", bg="#ffe4f1")
+        lives -= 1
+        attempts -= 1
+
+    update_status()  # Atualiza a exibição
+    
+    # Limpa as seleções para a próxima rodada
+    first_selection = None
+    second_selection = None
+
+    # Verifica condição de vitória ou derrota
+    if len(matched_indices) == len(card_buttons):
+        # Se encontrou todos os pares, venceu!
+        finish_game(True)
+    elif lives <= 0 or attempts <= 0:
+        # Se acabou vidas ou tentativas, perdeu!
+        finish_game(False)
+
+
+def flip_card(index):
+    """
+    Vira uma carta quando o jogador clica nela.
+    Gerencia a seleção de duas cartas.
+    
+    Args:
+        index: Índice da carta clicada (0-15)
+    """
+    global first_selection, second_selection
+
+    # Não permite clicar em cartas já acertadas
+    if index in matched_indices:
+        return
+    
+    # Não permite clicar enquanto duas cartas estão selecionadas
+    if first_selection is not None and second_selection is not None:
+        return
+
+    button = card_buttons[index]
+    button.config(text=card_values[index], bg="#fff1fb")  # Mostra o símbolo
+
+    # Se não há primeira seleção, este clique é o primeiro
+    if first_selection is None:
+        first_selection = index
+        return
+
+    # Se clica na mesma carta novamente, ignora
+    if first_selection == index:
+        return
+
+    # Se chegou aqui, é a segunda seleção
+    second_selection = index
+    
+    # Aguarda 700 milissegundos (para o jogador ver) e depois verifica
+    root.after(700, check_match)
+
+
+def new_game():
+    """
+    Inicia um novo jogo.
+    Embaralha as cartas, reseta variáveis e mostra a tela do jogo.
+    """
+    global card_values, matched_indices, first_selection, second_selection, lives, attempts, start_time, pairs_found
+    
+    # Cria lista de pares (cada símbolo aparece 2 vezes)
+    card_values = CARD_ICONS * 2
+    random.shuffle(card_values)  # Embaralha a lista
+    
+    # Reseta todas as variáveis de jogo
+    matched_indices = set()
+    first_selection = None
+    second_selection = None
+    lives = 100
+    attempts = 100
+    start_time = None
+    pairs_found = 0  # ← NOVO: Reseta contador de pares
+
+    # Reseta a aparência de todos os botões
+    for button in card_buttons:
+        button.config(text="", state="normal", bg="#ffe4f1")
+
+    update_status()  # Atualiza exibição
+    update_pairs_display()  # ← NOVO: Atualiza exibição de pares
+    timer_label.config(text="⏱️ 00:00")  # Reseta cronômetro
+    show_game()  # Mostra tela do jogo
+    start_timer()  # Inicia cronômetro
+
+
+def start_game():
+    """
+    Inicia o jogo. Pede nome do jogador se não digitou.
+    """
+    # Se não digitou nome, pergunta se quer jogar como "Convidado"
+    if not player_name.get().strip():
+        if not messagebox.askyesno("Nome", "Deseja jogar como Convidado? 🤍"):
+            return
+        player_name.set("Convidado")
+
+    new_game()  # Começa um novo jogo
+
+
+# =====================================================
+# CRIAÇÃO DA TELA INICIAL (HOME)
+# =====================================================
+
+home_frame = tk.Frame(root, bg="#ffe4f1")
+
+# Título principal
+home_title = tk.Label(
+    home_frame,
+    text="Memory Game Deluxe",
+    font=("Comic Sans MS", 42, "bold"),
+    bg="#ffe4f1",
+    fg="#880e4f",
+)
+
+# Subtítulo
+home_subtitle = tk.Label(
+    home_frame,
+    text="Bem vindo ao game",
+    font=("Helvetica", 18, "italic"),
+    bg="#ffe4f1",
+    fg="#ad1457",
+)
+
+# Label para "Digite seu nome"
+name_label_home = tk.Label(
+    home_frame,
+    text="Digite seu nome:",
+    font=("Arial", 18, "bold"),
+    bg="#ffe4f1",
+    fg="#6a1b9a",
+)
+
+# Campo de entrada para nome
+name_entry = tk.Entry(
+    home_frame,
+    textvariable=player_name,
+    font=("Arial", 18),
+    width=18,
+    bd=4,
+    relief="ridge",
+)
+
+# Botão para jogar
+play_button = tk.Button(
+    home_frame,
+    text="🎮 Jogar",
+    font=("Arial", 18, "bold"),
+    bg="#f48fb1",
+    fg="#4a148c",
+    activebackground="#ec407a",
+    command=start_game,
+    width=14,
+)
+
+# Botão para ver ranking
+ranking_button = tk.Button(
+    home_frame,
+    text="🏆 Ranking",
+    font=("Arial", 18, "bold"),
+    bg="#f8bbd0",
+    fg="#6a1b9a",
+    activebackground="#f06292",
+    command=show_ranking,
+    width=14,
+)
+
+# Botão para sair
+exit_button = tk.Button(
+    home_frame,
+    text="🚪 Sair",
+    font=("Arial", 18, "bold"),
+    bg="#f06292",
+    fg="#ffffff",
+    activebackground="#e91e63",
+    command=exit_game,
+    width=14,
+)
+
+# Organiza os elementos verticalmente na tela
+home_title.pack(pady=(60, 12))
+home_subtitle.pack(pady=(0, 40))
+name_label_home.pack(pady=(0, 10))
+name_entry.pack(pady=(0, 30))
+play_button.pack(pady=10)
+ranking_button.pack(pady=10)
+exit_button.pack(pady=10)
+
+
+# =====================================================
+# CRIAÇÃO DA TELA DO JOGO
+# =====================================================
+
+game_frame = tk.Frame(root, bg="#fff0f6")
+
+# Label mostrando o nome do jogador
+name_display_label = tk.Label(
+    game_frame,
+    text="Jogador: Convidado",
+    font=("Arial", 18, "bold"),
+    bg="#fff0f6",
+    fg="#6a1b9a",
+)
+
+# Frame para agrupar status (vidas, tentativas, cronômetro)
+status_frame = tk.Frame(game_frame, bg="#fff0f6")
+
+# Label com o número de vidas
+life_label = tk.Label(
+    status_frame,
+    text="Vidas: 100",
+    font=("Arial", 18, "bold"),
+    bg="#fff0f6",
+    fg="#6a1b9a",
+)
+
+# Label com o número de tentativas
+attempt_label = tk.Label(
+    status_frame,
+    text="Tentativas: 100",
+    font=("Arial", 18, "bold"),
+    bg="#fff0f6",
+    fg="#6a1b9a",
+)
+
+# Label com o cronômetro
+timer_label = tk.Label(
+    status_frame,
+    text="⏱️ 00:00",
+    font=("Arial", 18, "bold"),
+    bg="#fff0f6",
+    fg="#6a1b9a",
+)
+
+# Label com contador de pares encontrados
+pairs_label = tk.Label(
+    status_frame,
+    text="🎁 Pares: 0/8",
+    font=("Arial", 18, "bold"),
+    bg="#fff0f6",
+    fg="#6a1b9a",
+)
+
+# Título do jogo
+game_title = tk.Label(
+    game_frame,
+    text="🌸 Jogo da Memória 🌸",
+    font=("Comic Sans MS", 34, "bold"),
+    bg="#fff0f6",
+    fg="#880e4f",
+)
+
+# Frame para as cartas do jogo
+board_frame = tk.Frame(game_frame, bg="#fff0f6")
+
+# Cria 16 botões para as cartas (4x4)
+for i in range(16):
+    btn = tk.Button(
+        board_frame,
+        text="",  # Começa vazio
+        font=("Arial", 28, "bold"),
+        width=4,
+        height=2,
+        bg="#ffe4f1",
+        fg="#4a148c",
+        activebackground="#fff1fb",
+        command=lambda index=i: flip_card(index),  # Quando clica, vira a carta
+    )
+    # Posiciona o botão em forma de grade (4 colunas)
+    btn.grid(row=i // 4, column=i % 4, padx=10, pady=10)
+    card_buttons.append(btn)  # Adiciona à lista
+
+# Frame para botões de controle
+control_frame = tk.Frame(game_frame, bg="#fff0f6")
+
+# Botão para novo jogo
+new_game_button = tk.Button(
+    control_frame,
+    text="🔄 Novo Jogo",
+    font=("Arial", 16, "bold"),
+    bg="#ea80fc",
+    fg="#ffffff",
+    activebackground="#d500f9",
+    command=new_game,
+    width=14,
+)
+
+# Botão para ver ranking
+ranking_game_button = tk.Button(
+    control_frame,
+    text="🏆 Ranking",
+    font=("Arial", 16, "bold"),
+    bg="#f48fb1",
+    fg="#ffffff",
+    activebackground="#d81b60",
+    command=show_ranking,
+    width=14,
+)
+
+# Botão para sair
+exit_game_button = tk.Button(
+    control_frame,
+    text="🚪 Sair",
+    font=("Arial", 16, "bold"),
+    bg="#f06292",
+    fg="#ffffff",
+    activebackground="#c2185b",
+    command=exit_game,
+    width=14,
+)
+
+# Organiza os elementos na tela do jogo
+name_display_label.pack(pady=(20, 5))
+game_title.pack(pady=(0, 15))
+status_frame.pack(pady=(0, 20))
+life_label.pack(side=tk.LEFT, padx=30)  # LEFT = lado esquerdo
+attempt_label.pack(side=tk.LEFT, padx=30)
+timer_label.pack(side=tk.LEFT, padx=30)
+pairs_label.pack(side=tk.LEFT, padx=30)  # ← NOVO: Adiciona contador de pares
+board_frame.pack()
+control_frame.pack(pady=30)
+new_game_button.grid(row=0, column=0, padx=8)
+ranking_game_button.grid(row=0, column=1, padx=8)
+exit_game_button.grid(row=0, column=2, padx=8)
+
+
+# =====================================================
+# CRIAÇÃO DA TELA DE VITÓRIA
+# =====================================================
+
+victory_frame = tk.Frame(root, bg="#fff0f6")
+
+# Título de vitória
+victory_title = tk.Label(
+    victory_frame,
+    text="🏆 Vitória! 🏆",
+    font=("Comic Sans MS", 40, "bold"),
+    bg="#fff0f6",
+    fg="#880e4f",
+)
+
+# Mensagem de vitória (será atualizada dinamicamente)
+victory_message = tk.StringVar()
+victory_message_label = tk.Label(
+    victory_frame,
+    textvariable=victory_message,
+    font=("Arial", 20, "bold"),
+    bg="#fff0f6",
+    fg="#6a1b9a",
+    wraplength=760,  # Quebra texto se muito longo
+    justify="center",
+)
+
+# Frame para botões de vitória
+victory_buttons_frame = tk.Frame(victory_frame, bg="#fff0f6")
+
+# Botão para novo jogo (na tela de vitória)
+victory_new_button = tk.Button(
+    victory_buttons_frame,
+    text="🔄 Novo Jogo",
+    font=("Arial", 16, "bold"),
+    bg="#ea80fc",
+    fg="#ffffff",
+    activebackground="#d500f9",
+    command=new_game,
+    width=14,
+)
+
+# Botão para ranking (na tela de vitória)
+victory_ranking_button = tk.Button(
+    victory_buttons_frame,
+    text="🏆 Ranking",
+    font=("Arial", 16, "bold"),
+    bg="#f48fb1",
+    fg="#ffffff",
+    activebackground="#d81b60",
+    command=show_ranking,
+    width=14,
+)
+
+# Botão para sair (na tela de vitória)
+victory_exit_button = tk.Button(
+    victory_buttons_frame,
+    text="🚪 Sair",
+    font=("Arial", 16, "bold"),
+    bg="#f06292",
+    fg="#ffffff",
+    activebackground="#c2185b",
+    command=exit_game,
+    width=14,
+)
+
+# Organiza elementos na tela de vitória
+victory_title.pack(pady=(80, 20))
+victory_message_label.pack(pady=(0, 40))
+victory_buttons_frame.pack()
+victory_new_button.grid(row=0, column=0, padx=8)
+victory_ranking_button.grid(row=0, column=1, padx=8)
+victory_exit_button.grid(row=0, column=2, padx=8)
+
+
+# =====================================================
+# CRIAÇÃO DA TELA DE RANKING
+# =====================================================
+
+ranking_frame = tk.Frame(root, bg="#fff0f6")
+
+# Título do ranking
+ranking_title = tk.Label(
+    ranking_frame,
+    text="🏆 Ranking Top 10",
+    font=("Comic Sans MS", 36, "bold"),
+    bg="#fff0f6",
+    fg="#880e4f",
+)
+
+# Frame que vai conter a lista do ranking
+ranking_list_frame = tk.Frame(ranking_frame, bg="#fff0f6")
+ranking_list_frame.pack(pady=20)
+
+# Frame para botões de ranking
+ranking_buttons_frame = tk.Frame(ranking_frame, bg="#fff0f6")
+
+# Botão para resetar ranking
+ranking_reset_button = tk.Button(
+    ranking_buttons_frame,
+    text="🗑️ Resetar Ranking",
+    font=("Arial", 16, "bold"),
+    bg="#f48fb1",
+    fg="#ffffff",
+    activebackground="#d81b60",
+    command=reset_ranking,
+    width=18,
+)
+
+# Botão para voltar à inicial
+ranking_back_button = tk.Button(
+    ranking_buttons_frame,
+    text="🔙 Voltar",
+    font=("Arial", 16, "bold"),
+    bg="#ea80fc",
+    fg="#ffffff",
+    activebackground="#d500f9",
+    command=show_home,
+    width=18,
+)
+
+# Organiza elementos na tela de ranking
+ranking_title.pack(pady=(40, 10))
+ranking_list_frame.pack()
+ranking_buttons_frame.pack(pady=20)
+ranking_reset_button.grid(row=0, column=0, padx=8)
+ranking_back_button.grid(row=0, column=1, padx=8)
+
+
+# =====================================================
+# INICIAR O PROGRAMA
+# =====================================================
+
+show_home()  # Mostra a tela inicial
+root.mainloop()  # Inicia a janela (fica aguardando eventos do usuário)
