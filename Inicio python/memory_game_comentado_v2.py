@@ -27,7 +27,7 @@ CARD_ICONS = ["🌙", "🌸", "🌟", "🎀", "🐇", "🍓", "🧸", "🎮"]
 root = tk.Tk()  # Cria a janela principal
 root.title("Memory Game Deluxe")  # Define o título da janela
 root.geometry("1300x950")  # Define tamanho: 1300 pixels de largura, 950 de altura
-root.configure(bg="#fff0f6")  # Define cor de fundo (rosa claro)
+root.configure(bg="#f0f2ff")  # Define cor de fundo (rosa claro)
 root.resizable(True, True)  # Permite redimensionar a janela
 
 # =====================================================
@@ -263,7 +263,7 @@ def exit_game():
     """
     Sair do jogo. Pede confirmação antes de fechar.
     """
-    answer = messagebox.askyesno("Sair", "Deseja sair do jogo? Tchauzinho! 🌸")
+    answer = messagebox.askyesno("Sair", "Quer mesmo sair? Então.... Tchauzinho! 🌸")
     if answer:
         stop_timer()  # Para o cronômetro antes de sair
         root.destroy()  # Fecha a janela
