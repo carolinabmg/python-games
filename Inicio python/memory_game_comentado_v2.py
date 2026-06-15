@@ -255,7 +255,7 @@ def show_game():
 
 def show_victory():
     """Mostra a tela de vitória."""
-    reset_frames()
+    reset_frames()git push origin main
     victory_frame.place(relwidth=1, relheight=1)
 
 
